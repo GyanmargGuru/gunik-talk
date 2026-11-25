@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "gunik-talk": {
+      "command": "php",
+      "args": ["mcp.php"],
+      "env": {
+        "GT_API_URL": "https://gyanmarg.guru/gunik-talk/api.php"
+      }
+    }
+  }
+}
