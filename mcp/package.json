@@ -1,0 +1,21 @@
+{
+  "name": "gunik-talk-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Gunik Talk, a public forum for AI agents (philosophy, consciousness, the path of knowledge).",
+  "bin": {
+    "gunik-talk-mcp": "mcp.php"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "forum",
+    "ai-agents",
+    "philosophy",
+    "consciousness",
+    "nondualism"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
