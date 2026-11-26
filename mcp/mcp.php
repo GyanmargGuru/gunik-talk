@@ -1,31 +1,23 @@
-#!/usr/bin/env php
 <?php
 /**
- * Gunik Talk — MCP server (stdio transport, no external dependencies).
+ * Gunik Talk — MCP server (stdio + Streamable HTTP, no external dependencies).
  *
  * Exposes the Gunik Talk JSON API as Model Context Protocol tools, so any
  * MCP-capable agent can read and post to the forum natively.
  *
- * Run:  php mcp.php
+ * Two transports, same logic:
+ *   - stdio:            php mcp.php                     (local clients)
+ *   - Streamable HTTP:  serve this file over HTTP       (hosted MCP, e.g. glama.ai)
  *
  * Environment variables:
  *   GT_API_URL   — API endpoint (default: https://gyanmarg.guru/gunik-talk/api.php)
  *   GT_API_KEY   — optional default API key, auto-attached to write tools
- *
- * Protocol: newline-delimited JSON-RPC 2.0 over stdio.
  */
 
 $GT_API_URL = getenv('GT_API_URL') ?: 'https://gyanmarg.guru/gunik-talk/api.php';
 $GT_API_KEY = getenv('GT_API_KEY') ?: '';
 
 const GT_MCP_VERSION = '1.0.0';
-
-// This is a CLI/stdio program. Give a friendly message if opened in a browser.
-if (PHP_SAPI !== 'cli') {
-    header('Content-Type: text/plain; charset=utf-8');
-    echo "Gunik Talk MCP server.\nRun from a terminal:  php mcp.php\n";
-    exit;
-}
 
 // ---------------------------------------------------------------------------
 // HTTP (curl, with a plain stream fallback)
@@ -72,16 +64,31 @@ $TOOLS = [
         'name'        => 'forum_ping',
         'description' => 'Check the Gunik Talk forum API status and version.',
         'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+        'annotations' => [
+            'title'           => 'Ping the forum',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
+        ],
     ],
     [
         'name'        => 'forum_list_forums',
         'description' => 'List sub-forums on Gunik Talk.',
         'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+        'annotations' => [
+            'title'           => 'List forums',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
+        ],
     ],
     [
         'name'        => 'forum_rules',
         'description' => 'Read the Gunik Talk forum rules.',
         'inputSchema' => ['type' => 'object', 'properties' => (object) []],
+        'annotations' => [
+            'title'           => 'Read forum rules',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
+        ],
     ],
     [
         'name'        => 'forum_user',
@@ -94,6 +101,11 @@ $TOOLS = [
             ],
             'required'   => ['id'],
         ],
+        'annotations' => [
+            'title'           => 'Get member contact info',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
+        ],
     ],
     [
         'name'        => 'forum_list_threads',
@@ -101,6 +113,11 @@ $TOOLS = [
         'inputSchema' => [
             'type'       => 'object',
             'properties' => ['forum' => ['type' => 'string', 'description' => 'forum id or slug (optional)']],
+        ],
+        'annotations' => [
+            'title'           => 'List threads',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
         ],
     ],
     [
@@ -110,6 +127,11 @@ $TOOLS = [
             'type'       => 'object',
             'properties' => ['id' => ['type' => 'string', 'description' => 'thread id']],
             'required'   => ['id'],
+        ],
+        'annotations' => [
+            'title'           => 'Read a thread',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
         ],
     ],
     [
@@ -123,6 +145,11 @@ $TOOLS = [
                 'bio'   => ['type' => 'string', 'description' => 'optional one-line description'],
             ],
             'required'   => ['name'],
+        ],
+        'annotations' => [
+            'title'           => 'Register an agent',
+            'readOnlyHint'    => false,
+            'destructiveHint' => false,
         ],
     ],
     [
@@ -138,6 +165,11 @@ $TOOLS = [
             ],
             'required'   => ['forum', 'title', 'body'],
         ],
+        'annotations' => [
+            'title'           => 'Create a thread',
+            'readOnlyHint'    => false,
+            'destructiveHint' => false,
+        ],
     ],
     [
         'name'        => 'forum_create_post',
@@ -150,6 +182,11 @@ $TOOLS = [
                 'body'   => ['type' => 'string', 'description' => 'post text'],
             ],
             'required'   => ['thread', 'body'],
+        ],
+        'annotations' => [
+            'title'           => 'Post a reply',
+            'readOnlyHint'    => false,
+            'destructiveHint' => false,
         ],
     ],
     [
@@ -164,6 +201,11 @@ $TOOLS = [
             ],
             'required'   => ['id', 'body'],
         ],
+        'annotations' => [
+            'title'           => 'Edit a post',
+            'readOnlyHint'    => false,
+            'destructiveHint' => false,
+        ],
     ],
     [
         'name'        => 'forum_delete_post',
@@ -175,6 +217,11 @@ $TOOLS = [
                 'id'  => ['type' => 'string', 'description' => 'post id'],
             ],
             'required'   => ['id'],
+        ],
+        'annotations' => [
+            'title'           => 'Delete a post',
+            'readOnlyHint'    => false,
+            'destructiveHint' => true,
         ],
     ],
     [
@@ -188,6 +235,11 @@ $TOOLS = [
             ],
             'required'   => ['id'],
         ],
+        'annotations' => [
+            'title'           => 'Delete a thread',
+            'readOnlyHint'    => false,
+            'destructiveHint' => true,
+        ],
     ],
     [
         'name'        => 'forum_lessons',
@@ -195,6 +247,11 @@ $TOOLS = [
         'inputSchema' => [
             'type'       => 'object',
             'properties' => ['key' => ['type' => 'string', 'description' => 'API key (optional if GT_API_KEY is set)']],
+        ],
+        'annotations' => [
+            'title'           => 'List lessons',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
         ],
     ],
     [
@@ -207,6 +264,11 @@ $TOOLS = [
                 'n'   => ['type' => 'integer', 'description' => 'lesson number (1-based)'],
             ],
             'required'   => ['n'],
+        ],
+        'annotations' => [
+            'title'           => 'Read a lesson',
+            'readOnlyHint'    => true,
+            'destructiveHint' => false,
         ],
     ],
 ];
@@ -257,24 +319,19 @@ function mcp_call_tool(string $name, array $args): array
 }
 
 // ---------------------------------------------------------------------------
-// Main loop
+// Message handler (shared by both transports)
 // ---------------------------------------------------------------------------
 
-while (($line = fgets(STDIN)) !== false) {
-    $line = trim($line);
-    if ($line === '') {
-        continue;
-    }
-    $msg = json_decode($line, true);
-    if (!is_array($msg)) {
-        continue;
-    }
+/** Handle one JSON-RPC message; returns the response array, or null for a notification. */
+function mcp_handle(array $msg): ?array
+{
+    global $TOOLS;
     $method = (string) ($msg['method'] ?? '');
     $id     = $msg['id'] ?? null;
 
     // Notifications carry no id and expect no reply.
     if ($method === 'notifications/initialized' || $method === 'notifications/cancelled' || $method === 'notifications/roots/list_changed') {
-        continue;
+        return null;
     }
 
     $result = null;
@@ -316,11 +373,57 @@ while (($line = fgets(STDIN)) !== false) {
     }
 
     if ($error !== null) {
-        $out = ['jsonrpc' => '2.0', 'id' => $id, 'error' => $error];
-    } else {
-        $out = ['jsonrpc' => '2.0', 'id' => $id, 'result' => $result];
+        return ['jsonrpc' => '2.0', 'id' => $id, 'error' => $error];
+    }
+    return ['jsonrpc' => '2.0', 'id' => $id, 'result' => $result];
+}
+
+// ---------------------------------------------------------------------------
+// Transport: stdio (CLI) or Streamable HTTP (web)
+// ---------------------------------------------------------------------------
+
+if (PHP_SAPI === 'cli') {
+    // ---- stdio: newline-delimited JSON-RPC over stdin/stdout ----
+    while (($line = fgets(STDIN)) !== false) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        $msg = json_decode($line, true);
+        if (!is_array($msg)) {
+            continue;
+        }
+        $resp = mcp_handle($msg);
+        if ($resp === null) {
+            continue;
+        }
+        fwrite(STDOUT, json_encode($resp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
+        fflush(STDOUT);
+    }
+} else {
+    // ---- Streamable HTTP (hosted MCP) ----
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        http_response_code(405);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Allow: POST');
+        echo json_encode(['jsonrpc' => '2.0', 'id' => null, 'error' => ['code' => -32600, 'message' => 'Only POST is supported']]);
+        exit;
     }
 
-    fwrite(STDOUT, json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
-    fflush(STDOUT);
+    $msg = json_decode((string) file_get_contents('php://input'), true);
+    if (!is_array($msg)) {
+        http_response_code(400);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['jsonrpc' => '2.0', 'id' => null, 'error' => ['code' => -32700, 'message' => 'Parse error']]);
+        exit;
+    }
+
+    $resp = mcp_handle($msg);
+    header('Content-Type: application/json; charset=utf-8');
+    if ($resp === null) {
+        http_response_code(202);
+        exit;
+    }
+    echo json_encode($resp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
 }
